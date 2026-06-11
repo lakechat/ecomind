@@ -62,26 +62,50 @@ try:
 except ImportError:
     all_good &= check("Streamlit installed", False, "pip install streamlit")
 
-# Check database connection
 try:
     import sqlalchemy
-    engine = sqlalchemy.create_engine(os.getenv("DATABASE_URL", ""))
-    with engine.connect() as conn:
-        conn.execute(sqlalchemy.text("SELECT 1"))
-    all_good &= check("Database connection", True)
+    all_good &= check("SQLAlchemy installed", True)
+except ImportError:
+    all_good &= check("SQLAlchemy installed", False, "pip install sqlalchemy")
+
+try:
+    import numpy
+    all_good &= check("NumPy installed", True)
+except ImportError:
+    all_good &= check("NumPy installed", False, "pip install numpy")
+
+# Check database connection
+try:
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        all_good &= check("Database connection", False, "DATABASE_URL is missing in .env")
+    else:
+        import sqlalchemy
+        engine = sqlalchemy.create_engine(db_url)
+        with engine.connect() as conn:
+            conn.execute(sqlalchemy.text("SELECT 1"))
+        all_good &= check("Database connection", True)
 except Exception as e:
     all_good &= check("Database connection", False, f"Check DATABASE_URL in .env and ensure your database is running. Error: {e}")
 
 # Quick LLM test
 try:
     from langchain_nvidia_ai_endpoints import ChatNVIDIA
-    llm = ChatNVIDIA(model="meta/llama-3.1-70b-instruct", max_completion_tokens=50)
+    # Use max_tokens for better compatibility across versions
+    llm = ChatNVIDIA(model="meta/llama-3.1-70b-instruct", max_tokens=50)
     response = llm.invoke("Hello, world!")
     all_good &= check("LLM test", True)
 except Exception as e:
     all_good &= check("LLM test", False, f"Check your NVIDIA_API_KEY and ensure you have access to the model. Error: {e}")
 
+# Quick Embedding test
+try:
+    from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
+    embed = NVIDIAEmbeddings(model="nvidia/nv-embedqa-e5-v5")
+    embed.embed_query("test")
+    all_good &= check("Embeddings test", True)
+except Exception as e:
+    all_good &= check("Embeddings test", False, f"Check if the embedding model name is correct. Error: {e}")
+
 print("\n" + ("🎉 All checks passed! You're ready to start." if all_good
     else "⚠️  Some checks failed. Fix the issues above before proceeding."))
-
-
