@@ -27,6 +27,7 @@ def chatbot_node(state: AgentState) -> AgentState:
 
     # prepend system message to the conversation
     messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
+   # messages = state["messages"]
 
     #Call the LLM
     response = llm.invoke(messages)
